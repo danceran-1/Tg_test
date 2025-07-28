@@ -1,0 +1,7 @@
+{
+  "greenhouse_status": {
+    "temperature": 36,
+    "humidity": 25,
+    "water_level":5
+  }
+}

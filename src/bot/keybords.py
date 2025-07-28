@@ -19,14 +19,45 @@ def get_reply_keyboard():
     )
     return keyboard
 
+get_inf = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="Температура🌡", callback_data="tempirature"),
+        InlineKeyboardButton(text="Влажность🌀", callback_data="humidity")
+    ],
+    [
+        InlineKeyboardButton(text="Запас воды💧", callback_data="level_water"),
+        InlineKeyboardButton(text="Отчет📗", callback_data="report")
+    ],
+    [
+        InlineKeyboardButton(text="<< Назад", callback_data="get_back")
+    ]
+])
+
+get_move_1 = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Включить полив🚿", callback_data="water_on")],
+    [InlineKeyboardButton(text="Включить обдув💨", callback_data="fan_on")],
+    [InlineKeyboardButton(text="<< Назад", callback_data="get_back")]
+])
+
+day_week = InlineKeyboardMarkup(inline_keyboard=[
+    
+    [
+        InlineKeyboardButton(text="За день", callback_data="rep_day"),
+        InlineKeyboardButton(text="За неделю", callback_data="rep_week")
+    ],
+
+    [
+        InlineKeyboardButton(text="<< Назад", callback_data="get_back1"),
+        InlineKeyboardButton(text="В меню ↩", callback_data="get_back")
+    ]
+])
+
+
 get_api = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="1C", callback_data="oneC")],
-    [InlineKeyboardButton(text="Рекламации", callback_data="complaint")],
-    [InlineKeyboardButton(text="База знаний", callback_data="get_data")],
-    [InlineKeyboardButton(text="Сервисное обслуживание оборудования", callback_data="service")],
-    [InlineKeyboardButton(text="О компании", callback_data="inf_about_company")],
-    [InlineKeyboardButton(text="Проверка вложенности", callback_data="include_in")],
-    [InlineKeyboardButton(text="Техническая поддержка", callback_data="support")]
+    [
+        InlineKeyboardButton(text="Выполнить действие", callback_data="move"),
+        InlineKeyboardButton(text="Узнать информацию", callback_data="inf")
+    ]
 ])
 
 back = InlineKeyboardMarkup(inline_keyboard=[
@@ -37,6 +68,24 @@ back = InlineKeyboardMarkup(inline_keyboard=[
 just_menue = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="В меню ↩", callback_data="get_back2")]
 ])
+
+just_menue_fan = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Включить обдув💨", callback_data="fan_on")],
+    [InlineKeyboardButton(text="В меню ↩", callback_data="get_back2")]
+])
+
+just_menue_water_off = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Выключить полив🚿", callback_data="water_off")],
+    [InlineKeyboardButton(text="В меню ↩", callback_data="get_back2")]
+])
+
+just_menue_water_on = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Включить полив🚿", callback_data="water_on")],
+    [InlineKeyboardButton(text="В меню ↩", callback_data="get_back2")]
+])
+
+
+
 
 projects = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Клён", callback_data="klen")],

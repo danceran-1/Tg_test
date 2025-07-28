@@ -1,10 +1,11 @@
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
-from bot.handlers import router
-from for_api.setting import API_TOKEN
+from bot.handlers import router, set_main_menu
+from for_api.setting import API_TOKEN, ADMIN_CHAT_ID
 import logging
 import asyncio
 from aiohttp import web
+from psycopg2 import sql, errors
 
 
 logging.basicConfig(level=logging.INFO)
@@ -15,11 +16,13 @@ dp = Dispatcher()
 dp.include_router(router)
 
 
+
 async def web_handler(request):
     return web.Response(text="Bot is running")
 
 async def start_bot():
     try:
+        await set_main_menu(bot)
         await bot.delete_webhook(drop_pending_updates=True)
         logger.info("Starting polling...")
         await dp.start_polling(bot)
