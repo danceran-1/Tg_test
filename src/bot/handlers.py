@@ -12,14 +12,12 @@ from for_api.setting import API_TOKEN,ADMIN_CHAT_ID
 import psycopg2,json
 import pandas as pd
 from for_api.setting import  DATABASE_URL
-
 from aiogram import Bot
-
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton ,ReplyKeyboardMarkup,KeyboardButton
-
 from datetime import datetime ,timedelta
-
 from aiogram.types import FSInputFile
+import redis,os
+
 
 check = 0 
 
@@ -27,12 +25,156 @@ router = Router()
 
 bot = Bot(token=API_TOKEN)
 
+stats_water = 0
+stats_fan = 0
+
 class Form(StatesGroup):
     waiting_for_login = State()
     waiting_for_time = State()
 
-def daily_report():
+class Rediska:
+    def __init__(self, host=None, port=6379, db=0):
+        """Инициализация подключения к Redis"""
+        self.host = host or os.getenv("REDIS_HOST", "127.0.0.1")
+        self.port = port
+        self.db = db
+        self.client = None
+        self._connect()
 
+    def _connect(self):
+        """Установка соединения с Redis"""
+        try:
+            self.client = redis.StrictRedis(
+                host=self.host,
+                port=self.port,
+                db=self.db,
+                decode_responses=True,
+                socket_connect_timeout=5
+            )
+            if self.client.ping():
+                print("✅ Успешное подключение к Redis")
+            else:
+                raise ConnectionError("Не удалось подключиться к Redis")
+        except Exception as e:
+            print(f"❌ Ошибка подключения: {e}")
+            raise
+
+    def save_water_stats(self) -> bool:
+        """Сохранение статистики по воде (+1 использование при каждом вызове)"""
+        try:
+            daily_key = f"global:water:{datetime.now().strftime('%Y-%m-%d')}"
+            weekly_key = f"global:water:week:{datetime.now().strftime('%Y-%U')}"
+            
+            with self.client.pipeline() as pipe:
+                pipe.incrby(daily_key, 1)
+                pipe.expire(daily_key, 86400)  # TTL 1 день
+                pipe.incrby(weekly_key, 1)
+                pipe.expire(weekly_key, 604800)  # TTL 1 неделя
+                pipe.execute()
+            return True
+        except Exception as e:
+            print(f"Ошибка сохранения статистики воды: {e}")
+            return False
+
+    def save_fan_stats(self) -> bool:
+        """Сохранение статистики по вентилятору (+1 использование при каждом вызове)"""
+        try:
+            daily_key = f"global:fan:{datetime.now().strftime('%Y-%m-%d')}"
+            weekly_key = f"global:fan:week:{datetime.now().strftime('%Y-%U')}"
+            
+            with self.client.pipeline() as pipe:
+                pipe.incrby(daily_key, 1)
+                pipe.expire(daily_key, 86400)
+                pipe.incrby(weekly_key, 1)
+                pipe.expire(weekly_key, 604800)
+                pipe.execute()
+            return True
+        except Exception as e:
+            print(f"Ошибка сохранения статистики вентилятора: {e}")
+            return False
+
+    def get_daily_water(self) -> int:
+        """Получение дневной статистики по воде"""
+        key = f"global:water:{datetime.now().strftime('%Y-%m-%d')}"
+        return int(self.client.get(key) or 0)
+
+    def get_weekly_water(self) -> int:
+        """Получение недельной статистики по воде"""
+        key = f"global:water:week:{datetime.now().strftime('%Y-%U')}"
+        return int(self.client.get(key) or 0)
+
+    def get_daily_fan(self) -> int:
+        """Получение дневной статистики по вентилятору"""
+        key = f"global:fan:{datetime.now().strftime('%Y-%m-%d')}"
+        return int(self.client.get(key) or 0)
+
+    def get_weekly_fan(self) -> int:
+        """Получение недельной статистики по вентилятору"""
+        key = f"global:fan:week:{datetime.now().strftime('%Y-%U')}"
+        return int(self.client.get(key) or 0)
+
+    def get_all_stats(self) -> dict:
+        """Получение всей глобальной статистики"""
+        return {
+            'daily_water': self.get_daily_water(),
+            'weekly_water': self.get_weekly_water(),
+            'daily_fan': self.get_daily_fan(),
+            'weekly_fan': self.get_weekly_fan()
+        }
+
+redis_manager = Rediska()
+
+@router.message(CommandStart())
+async def cmd_start(message: types.Message):
+
+    if redis_manager.client is None or not redis_manager.client.ping():
+        await message.answer("⚠️ Ошибка подключения к базе данных")
+        return
+    
+    # сохранения данных при старте
+    
+    
+
+    asyncio.create_task(check_critical_parameters(bot))
+    
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO notification_users (user_id, chat_id)
+            VALUES (%s, %s)
+            ON CONFLICT (user_id) DO UPDATE
+            SET receive_alerts = TRUE
+        """, (message.from_user.id, message.chat.id))
+        conn.commit()
+    except Exception as e:
+        await message.answer("❌ Не удалось оформить подписку")
+    finally:
+        conn.close()
+
+    user = message.from_user
+    is_registered = await register_user(
+        telegram_id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name
+    )
+    
+    if is_registered:
+        msg1 = await message.answer("✅ Вы успешно зарегистрированы!")
+        await message.answer("Что хотите сделать?",reply_markup = kb.get_api)
+        await asyncio.sleep(2)
+        await msg1.delete()
+
+    else:
+        msg1 = await message.answer("ℹ️ Вы уже зарегистрированы в системе.")
+        await message.answer("Что хотите сделать?",reply_markup = kb.get_api)
+        await asyncio.sleep(2)
+        await msg1.delete()
+
+def daily_report():
 
     try: 
         with open("info/daily_report.json", 'r') as file:
@@ -123,51 +265,61 @@ async def register_user(telegram_id: int, username: str, first_name: str, last_n
         conn.close()
 
 
-@router.message(CommandStart())
-async def cmd_start(message: types.Message):
 
-
-    asyncio.create_task(check_critical_parameters(bot))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-            INSERT INTO notification_users (user_id, chat_id)
-            VALUES (%s, %s)
-            ON CONFLICT (user_id) DO UPDATE
-            SET receive_alerts = TRUE
-        """, (message.from_user.id, message.chat.id))
-        conn.commit()
-    except Exception as e:
-        await message.answer("❌ Не удалось оформить подписку")
-    finally:
-        conn.close()
-
-    user = message.from_user
-    is_registered = await register_user(
-        telegram_id=user.id,
-        username=user.username,
-        first_name=user.first_name,
-        last_name=user.last_name
-    )
-    
-    if is_registered:
-        msg1 = await message.answer("✅ Вы успешно зарегистрированы!")
-        await message.answer("Что хотите сделать?",reply_markup = kb.get_api)
-        await asyncio.sleep(2)
-        await msg1.delete()
-
-    else:
-        msg1 = await message.answer("ℹ️ Вы уже зарегистрированы в системе.")
-        await message.answer("Что хотите сделать?",reply_markup = kb.get_api)
-        await asyncio.sleep(2)
-        await msg1.delete()
 
 @router.message(F.text == "/myid")
 async def get_chat_id(message: types.Message):
     await message.answer(f"Ваш chat_id: {message.chat.id}")
+
+@router.message(F.text == "/help")
+async def show_help(message: types.Message):
+    help_text = """
+    📚 <b>Список доступных команд:</b>
+
+    <b>Основные команды:</b>
+    /start - Начать работу с ботом
+    /help - Показать это сообщение
+    /myid - Показать ваш chat_id
+
+    <b>Управление устройствами:</b>
+    /fan_on - Включить вентилятор
+    /water_on - Включить полив
+
+    <b>Статистика:</b>
+    /stats - Показать статистику работы системы
+
+    ℹ️ Для управления теплицей используйте кнопки в меню.
+        """
+    await message.answer(
+        text=help_text,
+        parse_mode="HTML",
+        reply_markup=kb.just_menue
+    )
+
+
+@router.message(F.text == "/stats")
+async def get_stats(message: types.Message):
+
+    user_id = message.from_user.id
+    
+    try:
+        stats = redis_manager.get_all_stats()
+        
+        stats_text = (
+            "📊 Ваша статистика:\n\n"
+            "💧 Вода:\n"
+            f"  Сегодня: {stats['daily_water']} раз\n"
+            f"  За неделю: {stats['weekly_water']} раз\n\n"
+            "🌀 Вентилятор:\n"
+            f"  Сегодня: {stats['daily_fan']} раз\n"
+            f"  За неделю: {stats['weekly_fan']} раз\n\n"
+            f"🆔 Ваш ID: {user_id}"
+        )
+        
+        await message.answer(stats_text,reply_markup=kb.just_menue)
+        
+    except Exception as e:
+        await message.answer(f"⚠️ Ошибка получения статистики: {str(e)}")
 
 
 async def get_move_keyboard(user_id: int) -> InlineKeyboardMarkup:
@@ -206,6 +358,8 @@ async def handle_fan(callback: CallbackQuery):
     user_id = callback.from_user.id
     
     new_state_fan = (action == "on") 
+    
+    redis_manager.save_fan_stats()
 
     update_fan(user_id,new_state_fan)
     
@@ -219,6 +373,7 @@ async def handle_fan(callback: CallbackQuery):
 async def handle_fan_on(message: Message):
     user_id = message.from_user.id
     update_fan(user_id, True)  
+    redis_manager.save_fan_stats()
     
     await message.answer(
         "Обдув включен",
@@ -248,6 +403,8 @@ async def handle_water(callback: CallbackQuery):
     
     new_state_water = (action == "on") 
 
+    redis_manager.save_water_stats()
+
     update_water(user_id,new_state_water)
     
     # Обновляем клавиатуру
@@ -257,9 +414,11 @@ async def handle_water(callback: CallbackQuery):
     await callback.answer(f"Полив {'включен' if new_state_water else 'выключен'}")
 
 @router.message(F.text == "/water_on")
-async def handle_fan_on(message: Message):
+async def handle_water_on(message: Message):
     user_id = message.from_user.id
     update_water(user_id, True)  
+
+    redis_manager.save_water_stats()
     
     await message.answer(
         "Полив включен",
@@ -286,10 +445,10 @@ async def set_main_menu(bot: Bot):
     main_menu_commands = [
         BotCommand(command='/start', description='🚀 Запустить бота'),
         BotCommand(command='/myid', description='🆔 Узнать свой ID'),
-        BotCommand(command='/water_on', description='📅 Отчет за день'),
-        BotCommand(command='/fan_on', description='📆 Отчет за неделю'),
-        # BotCommand(command='/help', description='❓ Помощь по командам'),
-        # BotCommand(command='/stats', description='❓ Помощь по командам')
+        BotCommand(command='/water_on', description='Включить воду'),
+        BotCommand(command='/fan_on', description='Включить обдув'),
+        BotCommand(command='/help', description='❓ Помощь по командам'),
+        BotCommand(command='/stats', description='❓ Помощь по командам')
     ]
     await bot.set_my_commands(main_menu_commands)
 

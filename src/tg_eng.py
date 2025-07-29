@@ -8,6 +8,7 @@ from aiohttp import web
 from psycopg2 import sql, errors
 
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
