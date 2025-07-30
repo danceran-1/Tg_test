@@ -1,0 +1,19 @@
+{
+  "week_1_2025": [
+    {
+      "date": "2025-07-27",
+      "avg_temperature": 23.8,
+      "avg_humidity": 62,
+      "min_water_level": 10
+    }    
+  ],
+  "week_2_2025": [
+    {
+      "date": "2025-08-3",
+      "avg_temperature": 20,
+      "avg_humidity": 50,
+      "min_water_level": 5
+    }    
+  ]
+
+}

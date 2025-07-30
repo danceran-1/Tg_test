@@ -8,6 +8,15 @@
             "name": "postgres",
             "username": "postgres",
             "database": "tg_test"
+        },
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "site",
+            "database": "project_docs",
+            "username": "postgres"
         }
     ]
 }

@@ -60,6 +60,13 @@ get_api = InlineKeyboardMarkup(inline_keyboard=[
     ]
 ])
 
+get_api_eng = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="Perform action", callback_data="move"),
+        InlineKeyboardButton(text="Find out information", callback_data="inf")
+    ]
+])
+
 back = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="<< Назад", callback_data="get_back")],
     [InlineKeyboardButton(text="В меню ↩", callback_data="get_back")]

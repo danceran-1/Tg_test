@@ -16,7 +16,7 @@ from aiogram import Bot
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton ,ReplyKeyboardMarkup,KeyboardButton
 from datetime import datetime ,timedelta
 from aiogram.types import FSInputFile
-import redis,os
+import redis,os,aiohttp
 
 
 check = 0 
@@ -132,7 +132,15 @@ async def cmd_start(message: types.Message):
         return
     
     # сохранения данных при старте
-    
+    # async with aiohttp.ClientSession() as session:
+    #     async with session.get('http://localhost:8000/api/welcome-message/') as resp:
+    #         if resp.status == 200:
+    #             data = await resp.json()
+    #             greeting = data.get('message', "Добро пожаловать!")
+    #         else:
+    #             greeting = "Добро пожаловать!"
+
+    # await message.answer(greeting)
     
 
     asyncio.create_task(check_critical_parameters(bot))
@@ -269,7 +277,15 @@ async def register_user(telegram_id: int, username: str, first_name: str, last_n
 
 @router.message(F.text == "/myid")
 async def get_chat_id(message: types.Message):
-    await message.answer(f"Ваш chat_id: {message.chat.id}")
+    await message.answer(f"Ваш chat_id: {message.chat.id}. Нужен для входа на сайт")
+
+
+@router.message(F.text == "/translate")
+async def get_translate(message: types.Message):
+
+    await message.answer("ℹ️ You are already registered in the system.")
+    await message.answer("What do you want to do?",reply_markup = kb.get_api_eng)
+
 
 @router.message(F.text == "/help")
 async def show_help(message: types.Message):
@@ -279,7 +295,7 @@ async def show_help(message: types.Message):
     <b>Основные команды:</b>
     /start - Начать работу с ботом
     /help - Показать это сообщение
-    /myid - Показать ваш chat_id
+    /myid - Показать ваш chat_id, нужен для входа на сайт
 
     <b>Управление устройствами:</b>
     /fan_on - Включить вентилятор
@@ -448,7 +464,8 @@ async def set_main_menu(bot: Bot):
         BotCommand(command='/water_on', description='Включить воду'),
         BotCommand(command='/fan_on', description='Включить обдув'),
         BotCommand(command='/help', description='❓ Помощь по командам'),
-        BotCommand(command='/stats', description='❓ Помощь по командам')
+        BotCommand(command='/translate', description=' Перевод на английский'),
+        BotCommand(command='/stats', description='Статистика')
     ]
     await bot.set_my_commands(main_menu_commands)
 
