@@ -12,7 +12,7 @@
 - Frontend: HTML/CSS
 - База данных: PostgreSQL, Reids
 - Фреймворки и библиотеки: Aiogram, Django, pandas, pytest
-- Инструменты: Docker(Деплоил без него), Git
+- Инструменты: Docker, Git
 
 ## Установка и запуск
 - 1) git clone -b advance_task git@github.com:danceran-1/Tg_test.git
