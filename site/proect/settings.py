@@ -69,6 +69,13 @@ TEMPLATES = [
 ]
 
 
+ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.trycloudflare.com",
+]
+
+
 WSGI_APPLICATION = 'proect.wsgi.application'
 
 
@@ -81,7 +88,7 @@ DATABASES = {
         'NAME': 'tg_test',
         'USER': 'postgres',
         'PASSWORD': '123',
-        'HOST': 'localhost',
+        'HOST': 'host.docker.internal',
         'PORT': '5432',
     }
 }
